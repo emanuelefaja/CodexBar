@@ -55,4 +55,17 @@ Restore the saved config only if needed; doing so discards account/settings edit
 
 ## Verification record
 
-Implementation, focused checks, packaging and live-account results are recorded in the task handoff after execution. The instructions above are not evidence that those checks passed.
+Installed application revision: `b8df3f8`.
+
+- Focused startup/account/provider regression run: 139 tests in 13 suites passed.
+- `make check`: passed. Offline Claude Platform fixtures also passed.
+- Release resource, helper CLI, symlinked CLI, cold WebKit, and isolated application launch checks: passed.
+- Deep, strict ad-hoc codesign verification and the installer's 30-second normal-startup check: passed.
+- Native compact menu: all five configured subscription accounts rendered, including scoped Fable windows, remaining percentages, and reset values.
+- Clicking the second Claude account selected its own cached details and matching identity. The detail page includes Back to overview.
+- Both Claude Platform browser connections returned real balances: Chrome through the helper CLI and Safari through the installed app after Full Disk Access approval. Each connection is pinned to a distinct observed organization ID. Private account details are intentionally not recorded here.
+- The Safari CLI process still lacks cookie-store access from the terminal context. This is separate from the installed app's successful Safari read; do not broaden permissions or fall back to Chrome to hide that distinction.
+- OpenAI API credits remain outstanding. This revision does not claim to monitor a subscription-linked OpenAI API grant.
+- The full test suite was not run.
+
+The local Swift 6.3.2 optimized build required two narrow runtime workarounds: a callback-based WebKit identifier bridge and a nominal wrapper around the cookie-access observer TaskLocal. Packaging now exercises a detached-task synthetic cookie import, without real browser or credential access. The installer checks normal startup and restores the previous app if the fork exits during that check.
