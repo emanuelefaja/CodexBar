@@ -2,6 +2,7 @@
 
 /* OpenAI browser credits (fork English fallback). */
 "org-..." = "org-...";
+"%@/month" = "%@/month";
 "API" = "API";
 "Auto and API use API keys. Web reads credits from a selected Chrome profile and organization." = "Auto and API use API keys. Web reads credits from a selected Chrome profile and organization.";
 "Chrome profile" = "Chrome profile";

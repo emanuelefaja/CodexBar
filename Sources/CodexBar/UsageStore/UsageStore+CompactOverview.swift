@@ -23,6 +23,8 @@ extension UsageStore {
                 ["Primary", "Secondary", "Other"]
             }
             let hidePersonalInfo = self.settings.hidePersonalInfo
+            // Display slots are read-only metadata. They never select credentials or change fetch identity.
+            let presentations = self.settings.configSnapshot.providerConfig(for: instanceID)?.compactAccounts
             func input(
                 id: String? = nil,
                 identity: String? = nil,
@@ -41,7 +43,8 @@ extension UsageStore {
                     // Provider-specific by design: Console and OpenAI Platform own API balances, not subscription
                     // quotas.
                     balanceOnly: provider == .claudeplatform || provider == .openai,
-                    windowLabels: labels)
+                    windowLabels: labels,
+                    presentations: presentations)
             }
             if provider == .claude, !self.claudeSwapAccountSnapshots.isEmpty {
                 // Adapter order puts the active account first; sort by stable slot instead.

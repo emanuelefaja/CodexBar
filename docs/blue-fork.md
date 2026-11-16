@@ -8,6 +8,7 @@ Branch: `blue/compact-accounts`.
 ## Scope
 
 - A compact merged menu: account, limit, percentage left, reset countdown.
+- Optional display-only row names and USD monthly prices from the private config. Slots follow stable display order and never route credentials; changing them does not refetch usage.
 - Separate API balances, including negative balances and explicit unavailable data.
 - Multiple Claude Platform billing connections, each bound to a browser/profile and API organization.
 - An explicit OpenAI Web source for one existing Chrome profile and pinned Platform organization.
@@ -16,6 +17,23 @@ Branch: `blue/compact-accounts`.
 - New fork-specific strings use English fallback in non-English catalogs. Existing translations are unchanged.
 
 Subscription quotas and API balances are different products. Do not calculate an API grant balance by subtracting organization spend from a plan's advertised allowance. OpenAI Web reads the organization's exact available credits; it does not infer a subscription allowance or promise grant renewal.
+
+## Account names and prices
+
+Each provider config may carry a display-only `compactAccounts` map. Slot `"1"` is the first row in the
+provider's stable dashboard order, `"2"` the second row, and so on. A slot only changes that row's label and
+optional fixed USD monthly price; account IDs still own details, state, and credential routing.
+
+```json
+"compactAccounts": {
+  "1": {"name": "Example Pro", "monthlyPriceUSD": 200},
+  "2": {"name": "Example Pro 2", "monthlyPriceUSD": 200}
+}
+```
+
+Names are trimmed, single-line, and limited to 48 characters. Prices must be finite, non-negative, and are
+rounded to cents. Invalid values are omitted. These fields are excluded from fetch identity, so renaming or
+repricing a row never refetches usage. API balance rows normally stay automatic.
 
 ## OpenAI browser credits
 

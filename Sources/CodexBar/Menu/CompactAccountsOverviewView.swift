@@ -3,8 +3,8 @@ import SwiftUI
 struct CompactAccountsHeading: View {
     var body: some View {
         HStack(spacing: 8) {
-            Text(L("ACCOUNT")).frame(width: 84, alignment: .leading)
-            Text(L("LIMIT")).frame(width: 100, alignment: .leading)
+            Text(L("ACCOUNT")).frame(width: 96, alignment: .leading)
+            Text(L("LIMIT")).frame(width: 88, alignment: .leading)
             Text(L("LEFT")).frame(width: 80, alignment: .trailing)
             Text(L("RESET")).frame(width: 64, alignment: .trailing)
         }
@@ -29,21 +29,26 @@ struct CompactAccountsRowView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(index == 0 ? self.account.label : "")
                             .fontWeight(.medium)
+                        if index == 0, let price = self.account.monthlyPrice {
+                            Text(L("%@/month", price))
+                                .font(.system(size: 9))
+                                .foregroundStyle(self.isHighlighted ? .primary : .secondary)
+                        }
                         if index == 0, self.account.stale {
                             Text(L("Stale"))
                                 .font(.system(size: 9))
                                 .foregroundStyle(self.isHighlighted ? .primary : .secondary)
                         }
                     }
-                    .frame(width: 84, alignment: .leading)
+                    .frame(width: 96, alignment: .leading)
                     if self.balance {
                         Text(window.left)
                             .monospacedDigit()
                             .foregroundStyle(self.numberColor(window.severity))
-                            .frame(width: 260, alignment: .trailing)
+                            .frame(width: 248, alignment: .trailing)
                     } else {
                         Text(window.label)
-                            .frame(width: 100, alignment: .leading)
+                            .frame(width: 88, alignment: .leading)
                             .help(window.label)
                         Text(window.left)
                             .monospacedDigit()

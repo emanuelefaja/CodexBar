@@ -13,6 +13,8 @@ struct CompactAccountsOverview {
         var retained: Bool = false
         var balanceOnly: Bool = false
         var windowLabels: [String] = ["Session", "Weekly", "Other"]
+        /// Display slots shared by every row in this provider group. Never used for credential routing.
+        var presentations: CompactAccountPresentations?
     }
 
     enum Severity: Equatable {
@@ -38,6 +40,7 @@ struct CompactAccountsOverview {
         let provider: ProviderInstanceID
         let accountID: String?
         let label: String
+        let monthlyPrice: String?
         let help: String
         let stale: Bool
         let windows: [Window]
@@ -75,7 +78,11 @@ struct CompactAccountsOverview {
         for input in inputs {
             ordinals[input.name, default: 0] += 1
             let ordinal = ordinals[input.name, default: 1]
-            let label = counts[input.name, default: 0] > 1 ? "\(input.name) \(ordinal)" : input.name
+            let presentation = input.presentations?.presentation(forOrdinal: ordinal)
+            // A configured name replaces the generated ordinal; stable IDs still route details.
+            let label = presentation?.name ?? (counts[input.name, default: 0] > 1
+                ? "\(input.name) \(ordinal)" : input.name)
+            let monthlyPrice = Self.monthlyPriceText(presentation?.monthlyPriceUSD)
             let snapshot = input.snapshot
             let stale = snapshot.map {
                 input.retained || input.error != nil || now.timeIntervalSince($0.updatedAt) > Self.staleAfter
@@ -89,6 +96,7 @@ struct CompactAccountsOverview {
                     provider: input.provider,
                     accountID: input.accountID,
                     label: label,
+                    monthlyPrice: monthlyPrice,
                     help: help,
                     stale: stale,
                     windows: windows)
@@ -158,6 +166,15 @@ struct CompactAccountsOverview {
         if minutes >= 1440 { return "\(minutes / 1440)d \((minutes % 1440) / 60)h" }
         if minutes >= 60 { return "\(minutes / 60)h \(minutes % 60)m" }
         return "\(minutes)m"
+    }
+
+    /// Fixed USD subscription price. The view adds its localized per-month suffix.
+    static func monthlyPriceText(_ value: Double?) -> String? {
+        guard let value, value.isFinite, value >= 0 else { return nil }
+        // NumberFormatter's currency style inserts a nonbreaking space after the symbol.
+        let pattern = value.rounded() == value ? "%.0f" : "%.2f"
+        let amount = String(format: pattern, locale: Locale(identifier: "en_US_POSIX"), value)
+        return "$" + amount
     }
 
     static func balanceText(_ value: Double?, currency: String) -> String {

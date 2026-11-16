@@ -8,6 +8,8 @@ extension ProviderConfig {
         copy.accentColor = nil
         copy.hiddenUsageItemIDs = nil
         copy.modelRateLimits = nil
+        // Compact dashboard names and prices are display-only and must not refetch usage.
+        copy.compactAccounts = nil
         if let data = copy.tokenAccounts {
             copy.tokenAccounts = ProviderTokenAccountData(
                 version: data.version,

@@ -26,7 +26,7 @@ extension StatusItemController {
             CompactAccountsRowView(account: account, balance: balance),
             id: Self.overviewRowIdentifierPrefix + account.id,
             width: 384,
-            heightCacheFingerprint: "\(account.windows.count)|\(account.stale)|\(balance)",
+            heightCacheFingerprint: Self.compactRowFingerprint(account, balance: balance),
             submenu: submenu,
             usesGPUSelection: true,
             onClick: readOnly ? nil : { [weak self, weak interactionMenu] in
@@ -39,6 +39,12 @@ extension StatusItemController {
         }
         item.toolTip = account.help
         return item
+    }
+
+    /// Includes the label and price line so a renamed or repriced row cannot reuse an old height.
+    static func compactRowFingerprint(_ account: CompactAccountsOverview.Account, balance: Bool) -> String {
+        let price = account.monthlyPrice ?? ""
+        return "\(account.label)|\(price)|\(account.windows.count)|\(account.stale)|\(balance)"
     }
 
     private func compactOverviewDetailTarget(
@@ -83,7 +89,7 @@ extension StatusItemController {
             CompactAccountsRowView(account: account, balance: balance),
             id: "compactAccountDetail-" + account.id,
             width: 384,
-            heightCacheFingerprint: "\(account.windows.count)|\(account.stale)|\(balance)"))
+            heightCacheFingerprint: Self.compactRowFingerprint(account, balance: balance)))
         return submenu
     }
 

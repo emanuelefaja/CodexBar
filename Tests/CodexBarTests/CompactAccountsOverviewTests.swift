@@ -132,6 +132,36 @@ struct CompactAccountsOverviewTests {
     }
 
     @Test
+    func `configured names and prices replace generated ordinals`() {
+        let slots = CompactAccountPresentations(accounts: [
+            "1": .init(name: "Claude Ultra 1", monthlyPriceUSD: 200),
+            "2": .init(name: "Claude Ultra 2", monthlyPriceUSD: 200),
+        ])
+        let model = CompactAccountsOverview(inputs: [
+            .init(
+                provider: .claude,
+                accountID: "one",
+                name: "Claude",
+                snapshot: UsageSnapshot(primary: self.window(), secondary: nil, updatedAt: self.now),
+                presentations: slots),
+            .init(provider: .claude, accountID: "two", name: "Claude", presentations: slots),
+            .init(provider: .claude, accountID: "three", name: "Claude"),
+        ], now: self.now)
+        #expect(model.accounts.map(\.label) == ["Claude Ultra 1", "Claude Ultra 2", "Claude 3"])
+        #expect(model.accounts.map(\.monthlyPrice) == ["$200", "$200", nil])
+        #expect(model.accounts.map(\.id) == ["claude/account/one", "claude/account/two", "claude/account/three"])
+    }
+
+    @Test
+    func `price text is fixed USD and never negative`() {
+        #expect(CompactAccountsOverview.monthlyPriceText(200) == "$200")
+        #expect(CompactAccountsOverview.monthlyPriceText(12.5) == "$12.50")
+        #expect(CompactAccountsOverview.monthlyPriceText(0) == "$0")
+        #expect(CompactAccountsOverview.monthlyPriceText(-1) == nil)
+        #expect(CompactAccountsOverview.monthlyPriceText(.infinity) == nil)
+    }
+
+    @Test
     func `reset without a future timestamp is unknown never zero`() {
         #expect(CompactAccountsOverview.resetText(nil, now: self.now) == "Unknown")
         #expect(CompactAccountsOverview.resetText(self.now, now: self.now) == "Unknown")
