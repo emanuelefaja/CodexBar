@@ -63,13 +63,23 @@ public enum OpenAIDashboardWebsiteDataStore {
     static func existingIdentifiers(
         in directory: URL = Self.namedStoreDirectory,
         initialize: () -> Void = { _ = WKWebsiteDataStore.default() },
-        enumerate: () async -> [UUID] = { await WKWebsiteDataStore.allDataStoreIdentifiers }) async -> [UUID]
+        enumerate: () async -> [UUID] = { await Self.fetchIdentifiers() }) async -> [UUID]
     {
         guard let entries = try? FileManager.default.contentsOfDirectory(atPath: directory.path),
               entries.contains(where: { UUID(uuidString: $0) != nil }) else { return [] }
         // Enumeration omits InitializeWebKit2; its IO callback needs the main RunLoop initialized first.
         initialize()
         return await enumerate()
+    }
+
+    private static func fetchIdentifiers() async -> [UUID] {
+        // The Swift 6.3.2 generated async getter crashes while bridging WebKit's NSArray in release builds.
+        // Use the public callback API so the UUID array is bridged before resuming our continuation.
+        await withCheckedContinuation { continuation in
+            WKWebsiteDataStore.fetchAllDataStoreIdentifiers { identifiers in
+                continuation.resume(returning: identifiers)
+            }
+        }
     }
 
     public static func removeStore(

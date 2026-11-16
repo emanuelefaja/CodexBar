@@ -3,8 +3,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-mkdir -p "$ROOT/tmp"
-export TMPDIR="$ROOT/tmp"
+# The launch smoke test denies all reads under the checkout, including TMPDIR.
+# Keep its relocated app on disk outside the checkout, not under ROOT/tmp.
+umask 077
+export TMPDIR="$HOME/Library/Caches/CodexBarForkBuild/tmp"
+mkdir -p "$TMPDIR"
 export CODEXBAR_SIGNING=adhoc
 ./Scripts/package_app.sh release
 
