@@ -71,17 +71,17 @@ Restore the saved config only if needed; doing so discards account/settings edit
 
 ## Verification record
 
-Installed application revision: `b8df3f8`.
+Installed application revision: `7c1d36a`.
 
-- Focused startup/account/provider regression run: 139 tests in 13 suites passed.
-- `make check`: passed. Offline Claude Platform fixtures also passed.
+- Focused OpenAI/account/provider regression run: 192 tests in 23 suites passed.
+- `make check`: passed, including localization checks and strict lint. All six offline Claude Platform fixture scenarios passed.
+- Independent review identified two issues, both corrected and checked: best-effort storage reads could retain an old login, and the prepaid detail card could display spend instead of balance. The source now uses strict current-key reads, and the detail card prefers the explicit balance. Synthetic real-LevelDB and final-card formatter tests cover both fixes.
 - Release resource, helper CLI, symlinked CLI, cold WebKit, and isolated application launch checks: passed.
-- Deep, strict ad-hoc codesign verification and the installer's 30-second normal-startup check: passed.
-- Native compact menu: all five configured subscription accounts rendered, including scoped Fable windows, remaining percentages, and reset values.
-- Clicking the second Claude account selected its own cached details and matching identity. The detail page includes Back to overview.
-- Both Claude Platform browser connections returned real balances: Chrome through the helper CLI and Safari through the installed app after Full Disk Access approval. Each connection is pinned to a distinct observed organization ID. Private account details are intentionally not recorded here.
-- The Safari CLI process still lacks cookie-store access from the terminal context. This is separate from the installed app's successful Safari read; do not broaden permissions or fall back to Chrome to hide that distinction.
-- OpenAI API credits remain outstanding. This revision does not claim to monitor a subscription-linked OpenAI API grant.
+- Deep, strict ad-hoc codesign verification and a full 30-second normal-startup check: passed. The old app's open menu blocked AppleEvent Quit, so installation resumed from the verified staging app after stopping that process with TERM. No rebuild or smoke-check bypass was needed; the old app and private settings remain backed up.
+- The installed OpenAI CLI Web source returned the reported available credit balance for the expected account and pinned organization. No API key or stored session credential was added.
+- All five configured subscriptions returned fresh CLI readings, including both Claude Fable windows. GLM account emails are not independently verified.
+- On the previous revision, the native compact menu rendered all five subscriptions, and the second Claude row opened its own details with Back to overview. Both Claude Platform connections also returned real balances: Chrome through the helper CLI, Safari through the installed app after Full Disk Access approval. Each remains pinned to its own observed organization.
+- Final native-menu and Claude billing rechecks on this revision are pending because the macOS session is locked. A post-install Chrome billing CLI check reported blocked browser-cookie access. The Safari CLI also previously lacked cookie-store access in its terminal context. Unlock and recheck the app; approve permissions only if macOS requests them. Never broaden access or fall back to another browser to conceal a failure.
 - The full test suite was not run.
 
 The local Swift 6.3.2 optimized build required two narrow runtime workarounds: a callback-based WebKit identifier bridge and a nominal wrapper around the cookie-access observer TaskLocal. Packaging now exercises a detached-task synthetic cookie import, without real browser or credential access. The installer checks normal startup and restores the previous app if the fork exits during that check.
