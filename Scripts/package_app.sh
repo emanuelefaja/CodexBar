@@ -4,9 +4,9 @@ set -euo pipefail
 resolve_package_signing_mode() {
   local requested="${CODEXBAR_SIGNING:-adhoc}"
   case "$requested" in
-    adhoc|identity) ;;
+    adhoc|identity|local) ;;
     *)
-      echo "ERROR: Unsupported CODEXBAR_SIGNING: $requested (expected adhoc or identity)" >&2
+      echo "ERROR: Unsupported CODEXBAR_SIGNING: $requested (expected adhoc, identity or local)" >&2
       return 1
       ;;
   esac
@@ -19,8 +19,17 @@ resolve_package_signing_identity() {
     return
   fi
 
-  local requested="${APP_IDENTITY:-Developer ID Application: Peter Steinberger (Y5PE65HELJ)}"
-  local identities line name hash selected_name="" selected_hash="" matches=0
+  # "local" uses a user-trusted self-signed certificate. Unlike an ad-hoc signature, its
+  # designated requirement is stable across rebuilds, so TCC and Keychain grants survive updates.
+  local default_identity="Developer ID Application: Peter Steinberger (Y5PE65HELJ)"
+  if [[ "$SIGNING_MODE" == "local" ]]; then
+    default_identity="CodexBar Local Signing"
+  fi
+  local requested="${APP_IDENTITY:-$default_identity}"
+  local identities line name hash selected_name="" selected_hash=""
+  # Count distinct certificates, not keychain entries: the same identity can appear once per
+  # keychain in the search list without being ambiguous.
+  local matched_hashes=" "
   if ! identities=$(security find-identity -p codesigning -v); then
     echo "ERROR: Unable to list valid code-signing identities." >&2
     return 1
@@ -35,13 +44,22 @@ resolve_package_signing_identity() {
     if [[ "$hash" == "$requested_hash" || "$name" == *"$requested"* ]]; then
       selected_name="$name"
       selected_hash="$hash"
-      matches=$((matches + 1))
+      matched_hashes="$matched_hashes $hash "
     fi
   done <<<"$identities"
-  if [[ "$matches" != "1" ]]; then
-    echo "ERROR: APP_IDENTITY must match exactly one valid identity (found $matches); use its full name or SHA-1 hash." >&2
+  local unique_hashes
+  unique_hashes=$(printf '%s' "$matched_hashes" | tr ' ' '\n' | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
+  if [[ "$unique_hashes" != "1" ]]; then
+    echo "ERROR: APP_IDENTITY must match exactly one valid identity (found ${unique_hashes}); " \
+      "use its full name or SHA-1 hash." >&2
     return 1
   fi
+  if [[ "$SIGNING_MODE" == "local" ]]; then
+    APP_TEAM_ID="${APP_TEAM_ID:-Y5PE65HELJ}"
+    CODESIGN_ID="$selected_hash"
+    return
+  fi
+
   # Developer ID names end in the Team ID; development names may end in a personal ID instead.
   local team_pattern='^Developer ID Application: .+ \(([A-Z0-9]{10})\)$'
   if [[ ! "$selected_name" =~ $team_pattern ]]; then
@@ -283,7 +301,7 @@ if [[ "$LOWER_CONF" == "debug" ]]; then
   FEED_URL=""
   AUTO_CHECKS=false
 fi
-if [[ "$SIGNING_MODE" == "adhoc" ]]; then
+if [[ "$SIGNING_MODE" != "identity" ]]; then
   FEED_URL=""
   AUTO_CHECKS=false
 fi
@@ -584,6 +602,10 @@ install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/Mac
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
 if [[ "$SIGNING_MODE" == "adhoc" ]]; then
   CODESIGN_ID="-"
+  CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
+elif [[ "$SIGNING_MODE" == "local" ]]; then
+  # Self-signed identities cannot be notarized or timestamped; a stable leaf certificate is enough
+  # for TCC and Keychain to recognize the app across rebuilds.
   CODESIGN_ARGS=(--force --sign "$CODESIGN_ID")
 elif [[ "$ALLOW_LLDB" == "1" ]]; then
   CODESIGN_ID="-"

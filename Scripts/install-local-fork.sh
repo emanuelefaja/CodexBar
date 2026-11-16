@@ -8,7 +8,10 @@ cd "$ROOT"
 umask 077
 export TMPDIR="$HOME/Library/Caches/CodexBarForkBuild/tmp"
 mkdir -p "$TMPDIR"
-export CODEXBAR_SIGNING=adhoc
+# A stable self-signed identity keeps TCC and Keychain grants across rebuilds.
+./Scripts/provision-local-signing.sh
+export CODEXBAR_SIGNING=local
+export APP_IDENTITY="CodexBar Local Signing"
 ./Scripts/package_app.sh release
 
 APP=/Applications/CodexBar.app

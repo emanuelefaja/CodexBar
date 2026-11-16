@@ -68,7 +68,17 @@ The installer builds a release app with ad-hoc signing, verifies the staged sign
 
 The normal bundled CLI link continues to point to `CodexBar.app/Contents/Helpers/CodexBarCLI`.
 
-A local build has a different signing identity from the official release. macOS may require renewed browser Keychain and Full Disk Access approval. Do not change foreign Keychain ACLs or bypass macOS privacy controls. The fork retains upstream's consent gates.
+A local build uses a private, self-signed code-signing certificate (`CodexBar Local Signing`) instead of an ad-hoc
+signature. Ad-hoc signatures change on every rebuild, which makes macOS forget Full Disk Access and Keychain
+approvals; the stable certificate keeps the same designated requirement, so those grants survive updates.
+The certificate and its keychain live under `~/Library/Application Support/CodexBar/ForkSigning` (mode `0700`,
+password file mode `0600`) and are provisioned automatically by `Scripts/provision-local-signing.sh`.
+A Mac without the identity creates it on first install and may ask once to trust the certificate for code signing.
+Signing happens locally; the certificate is never notarized, exported, or committed.
+
+macOS may still require renewed browser Keychain and Full Disk Access approval after the first switch from an
+ad-hoc build. Do not change foreign Keychain ACLs or bypass macOS privacy controls. The fork retains upstream's
+consent gates.
 
 A manual Homebrew cask upgrade can still replace the app; in-app updates are disabled, not Homebrew itself.
 
