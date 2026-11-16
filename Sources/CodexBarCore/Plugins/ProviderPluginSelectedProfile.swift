@@ -8,6 +8,8 @@ import Crypto
 /// Live-only ownership. Neither cookie values nor the digest are serialized or exposed to scripts.
 public struct ProviderBrowserSessionOwner: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible {
     public let profile: ProviderBrowserProfile
+    /// Explicit organization pin for native sessions; display names are not ownership evidence.
+    public let organizationID: String?
     let digest: String
 
     public var description: String {
@@ -16,6 +18,22 @@ public struct ProviderBrowserSessionOwner: Sendable, Equatable, CustomStringConv
 
     public var debugDescription: String {
         self.description
+    }
+
+    /// Native browser sources bind the credential to the selected organization as well as the profile.
+    /// This digest remains live-only, exactly like cookie-backed ownership.
+    init(
+        provider: UsageProvider,
+        profile: ProviderBrowserProfile,
+        organizationID: String,
+        accessToken: String) throws
+    {
+        let data = try JSONEncoder().encode([
+            provider.rawValue, profile.browserID, profile.profileID, organizationID, accessToken,
+        ])
+        self.organizationID = organizationID
+        self.profile = profile
+        self.digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     init(
@@ -38,6 +56,7 @@ public struct ProviderBrowserSessionOwner: Sendable, Equatable, CustomStringConv
             .map { [$0.name, $0.domain, $0.path, String($0.hostOnly), String($0.secure), $0.value] }
             .sorted { $0.lexicographicallyPrecedes($1) }
         let data = try JSONEncoder().encode([[provider.rawValue, profile.browserID, profile.profileID]] + identities)
+        self.organizationID = nil
         self.profile = profile
         self.digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }

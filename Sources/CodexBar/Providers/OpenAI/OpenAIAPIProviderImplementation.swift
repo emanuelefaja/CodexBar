@@ -12,6 +12,10 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
 
     @MainActor
     func observeSettings(_ settings: SettingsStore) {
+        _ = settings.providerConfig(for: self.id)?.source
+        _ = settings.providerConfig(for: self.id)?.browserID
+        _ = settings.providerConfig(for: self.id)?.browserProfileID
+        _ = settings.providerConfig(for: self.id)?.organizationID
         _ = settings.providerConfig(for: self.id)?.pluginSettings?["OPENAI_LIVE_MINUTES"]
         _ = settings[
             providerConfig: .openai,
@@ -25,6 +29,8 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
 
     @MainActor
     func isAvailable(context: ProviderAvailabilityContext) -> Bool {
+        // Keep incomplete Web setup visible so the fetcher can report the missing profile or organization.
+        if self.usesWeb(context.settings) { return true }
         if OpenAIAPISettingsReader.apiKey(environment: context.environment) != nil {
             return true
         }
@@ -50,6 +56,7 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
         settings: SettingsStore,
         environment: [String: String]) -> [ProviderMenuEntry]
     {
+        guard !self.usesWeb(settings) else { return [] }
         // Resolve like refreshes do, so a selected token account counts as a credential.
         let resolved = ProviderRegistry.makeEnvironment(
             base: environment,
@@ -67,7 +74,8 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
         limitScope: ProviderModelRateLimitScope?)
         -> ProviderThroughputPresentation?
     {
-        Self.throughputPresentation(
+        guard !self.usesWeb(settings) else { return nil }
+        return Self.throughputPresentation(
             snapshot: snapshot,
             manual: limitScope.flatMap { settings.providerConfig(for: self.id)?.modelRateLimits(for: $0) } ?? [])
     }
@@ -118,7 +126,8 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
 
     @MainActor
     func settingsToggles(context: ProviderSettingsContext) -> [ProviderSettingsToggleDescriptor] {
-        [.init(
+        guard !self.usesWeb(context.settings) else { return [] }
+        return [.init(
             id: "openai-live-minutes",
             title: "Tokens per minute",
             subtitle: "Fetches 1-minute usage each refresh for the menu card chart and the menu bar Tokens/min token.",
@@ -142,6 +151,7 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
 
     @MainActor
     func settingsModelLimits(context: ProviderSettingsContext) -> [ProviderSettingsModelLimitsDescriptor] {
+        guard !self.usesWeb(context.settings) else { return [] }
         let scope = context.settings.modelRateLimitScope(for: self.id)
         let scopeText: String? = if context.settings.tokenAccounts(for: self.id).isEmpty {
             nil
@@ -166,7 +176,8 @@ struct OpenAIAPIProviderImplementation: ProviderImplementation {
 
     @MainActor
     func settingsFields(context: ProviderSettingsContext) -> [ProviderSettingsFieldDescriptor] {
-        [
+        guard !self.usesWeb(context.settings) else { return [self.webOrganizationField(context: context)] }
+        return [
             ProviderSettingsFieldDescriptor(
                 id: "openai-api-key",
                 title: "Admin API key",

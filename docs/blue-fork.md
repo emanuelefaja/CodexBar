@@ -10,11 +10,27 @@ Branch: `blue/compact-accounts`.
 - A compact merged menu: account, limit, percentage left, reset countdown.
 - Separate API balances, including negative balances and explicit unavailable data.
 - Multiple Claude Platform billing connections, each bound to a browser/profile and API organization.
+- An explicit OpenAI Web source for one existing Chrome profile and pinned Platform organization.
 - Existing provider detail pages remain accessible from account rows.
 - No automatic upstream updates. The fork uses the disabled updater even if an upstream Homebrew receipt exists.
 - New fork-specific strings use English fallback in non-English catalogs. Existing translations are unchanged.
 
-Subscription quotas and API balances are different products. Do not calculate an API grant balance by subtracting organization spend from a plan's advertised allowance. No OpenAI subscription-grant integration is added by this change.
+Subscription quotas and API balances are different products. Do not calculate an API grant balance by subtracting organization spend from a plan's advertised allowance. OpenAI Web reads the organization's exact available credits; it does not infer a subscription allowance or promise grant renewal.
+
+## OpenAI browser credits
+
+Choose **Web** under Settings → Providers → OpenAI, select an existing Chrome profile, and enter the required
+Platform Organization ID. This source needs no API key. Auto and API keep their existing API-key behavior.
+Web keeps saved API keys and token accounts passive, so one browser balance is not repeated against every key.
+The compact dashboard labels it **OpenAI API**, separate from subscription quotas and Claude API balances.
+
+Chrome-only support is intentional: the native source reads the selected profile's LocalStorage access token,
+not cookies. Profile discovery reads metadata only and never auto-selects Default or creates a new profile.
+Authentication and its exchange stay in memory; the source neither stores secrets nor rotates refresh tokens.
+If authentication expires, open Platform in that same profile and sign in or refresh there, then refresh CodexBar.
+The private Platform endpoints can change. Missing or rejected data is unavailable. A known session expiry is
+checked before publication; a null expiry is allowed. Grant expiry is not a quota reset.
+See [OpenAI setup and data rules](openai.md#browser-credits-explicit-web-source).
 
 ## Build and install
 

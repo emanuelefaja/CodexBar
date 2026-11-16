@@ -1,5 +1,5 @@
 ---
-summary: "OpenAI API provider: Admin API key daily graphs, per-minute live usage, and legacy balance fallback."
+summary: "OpenAI API provider: API-key usage graphs and explicit Chrome browser credits."
 read_when:
   - Updating OpenAI API Platform usage or cost display
   - Updating the OpenAI Live Usage window
@@ -10,8 +10,9 @@ read_when:
 
 CodexBar's OpenAI API provider targets the API Platform organization dashboard, not ChatGPT/Codex subscription limits.
 
-The bundled `openai.js` plugin is authoritative on QuickJS and JavaScriptCore. Swift retains settings and the typed
-usage-card adapter; the script supplies daily history, source labels, project scoping, and legacy billing fallback.
+For **Auto** and **API**, the bundled `openai.js` plugin is authoritative on QuickJS and JavaScriptCore. Swift retains
+settings and the typed usage-card adapter; the script supplies daily history, source labels, project scoping, and
+legacy billing fallback. **Web** is a separate, explicit native source for the selected organization's available credits.
 
 ## Data sources
 
@@ -24,7 +25,31 @@ usage-card adapter; the script supplies daily history, source labels, project sc
 2. Best-effort fallback: legacy `GET https://api.openai.com/v1/dashboard/billing/credit_grants` for older user API
    keys that cannot access organization usage. This endpoint is not part of OpenAI's current public API reference.
 
-## Setup
+## Browser credits (explicit Web source)
+
+In Settings → Providers → OpenAI, choose **Web**, select an existing **Chrome profile**, and enter the required
+**Organization ID** from OpenAI Platform. No API key is needed. The profile picker reads metadata only, does not
+create a profile, and does not select Default automatically. The existing provider entry stores `source: "web"`,
+`browserID: "chrome"`, `browserProfileID`, and `organizationId`. This is not a new provider or a token account.
+
+The native source reads only the selected Chrome profile's `oai-auth:onboard` access token from LocalStorage.
+Chrome is the only supported browser because this source uses Chrome LocalStorage, not browser cookies.
+It exchanges that token in memory, verifies membership in the pinned organization, and reads the private billing
+endpoint's exact `total_available`. A missing profile, missing organization, rejected session, or invalid response
+is unavailable, not zero. It does not switch profiles or borrow another provider's credentials.
+
+These are private Platform endpoints and can change without notice. If browser authentication expires, open
+OpenAI Platform in the selected Chrome profile, sign in or refresh there, then refresh CodexBar. CodexBar does not
+rotate refresh tokens, manipulate browser auth, read cookies for this source, or persist the access or exchanged
+session token. A known session expiry is checked before publication; a null expiry is allowed.
+A credit grant's expiry is not a quota reset.
+
+Web shows one **OpenAI API** balance in the compact dashboard, separate from Claude API balances and subscription
+quotas. It does not calculate allowance minus spend or promise that a credit grant renews. API keys, token accounts,
+project scope, TPM settings, and manual organization limits remain saved but are inactive and hidden while Web is
+selected. Live Usage is API-only. Return to Auto or API to use those saved settings.
+
+## API-key setup
 
 Store a key in the shared app/CLI config:
 

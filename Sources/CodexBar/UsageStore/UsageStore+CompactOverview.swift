@@ -13,6 +13,7 @@ extension UsageStore {
             case .zai: "GLM"
             case .codex: "Codex"
             case .claudeplatform: "Claude API"
+            case .openai: "OpenAI API"
             case let .some(provider): self.metadata(for: provider).displayName
             case .none: UserProviderPluginRegistry.plugin(for: instanceID)?.manifest.name ?? instanceID.rawValue
             }
@@ -37,8 +38,9 @@ extension UsageStore {
                     snapshot: snapshot,
                     error: error,
                     retained: retained,
-                    // Provider-specific by design: Console has balances; Claude adapter snapshots below own quotas.
-                    balanceOnly: provider == .claudeplatform,
+                    // Provider-specific by design: Console and OpenAI Platform own API balances, not subscription
+                    // quotas.
+                    balanceOnly: provider == .claudeplatform || provider == .openai,
                     windowLabels: labels)
             }
             if provider == .claude, !self.claudeSwapAccountSnapshots.isEmpty {
@@ -71,7 +73,10 @@ extension UsageStore {
                         error: record?.error)
                 }
             }
-            if let provider {
+            // Provider-specific by design: OpenAI Web owns one browser balance, never one copy per saved API key.
+            let passiveOpenAIAccounts = provider == .openai
+                && self.settings.providerConfig(for: .openai)?.source == .web
+            if let provider, !passiveOpenAIAccounts {
                 let accounts = self.settings.tokenAccounts(for: provider)
                 if !accounts.isEmpty {
                     let cached = self.validTokenAccountSnapshots(provider: provider, accounts: accounts)
@@ -85,7 +90,7 @@ extension UsageStore {
                     }
                 }
             }
-            let snapshot = self.snapshots[instanceID]
+            let snapshot = self.profileScopedSnapshot(for: instanceID)
             return [input(
                 identity: snapshot?.identity?.accountEmail,
                 snapshot: snapshot,

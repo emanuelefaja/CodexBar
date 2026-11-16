@@ -13,6 +13,20 @@ extension UsageStore {
 
     func profileScopedSnapshot(for instanceID: ProviderInstanceID) -> UsageSnapshot? {
         let snapshot = self.snapshots[instanceID]
+        // Provider-specific by design: OpenAI Web owns a profile and organization; its API source owns neither.
+        if instanceID == .openai {
+            let settings = OpenAIWebSettings(context: ProviderCredentialSettingsContext(
+                config: self.settings.providerConfig(for: .openai), account: nil))
+            if self.settings.providerConfig(for: .openai)?.source == .web {
+                guard let snapshot, let owner = snapshot.browserSessionOwner,
+                      let profile = settings.selectedProfile, profile.browserID == "chrome",
+                      let organizationID = settings.organizationID, !organizationID.isEmpty,
+                      owner.profile == profile, owner.organizationID == organizationID
+                else { return nil }
+                return snapshot
+            }
+            return snapshot?.browserSessionOwner == nil ? snapshot : nil
+        }
         guard let provider = instanceID.firstPartyProvider,
               let browsers = ProviderDescriptorRegistry.descriptor(for: provider).settingsSection
                   .selectedProfileBrowsers

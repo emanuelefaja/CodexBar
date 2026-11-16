@@ -17,11 +17,15 @@ public enum OpenAIAPIProviderDescriptor {
             injection: .environment(key: OpenAIAPISettingsReader.adminAPIKeyEnvironmentKey),
             requiresManualCookieSource: false,
             cookieName: nil,
-            environmentKeysToScrub: [OpenAIAPISettingsReader.projectIDEnvironmentKey]))
+            environmentKeysToScrub: [OpenAIAPISettingsReader.projectIDEnvironmentKey],
+            passiveSourceModes: [.web]))
 
     static func makeDescriptor() -> ProviderDescriptor {
         ProviderDescriptor(
             id: .openai,
+            settingsSection: .init(OpenAIWebProviderSettingsKey.self, credentialSettings: {
+                OpenAIWebSettings(context: $0)
+            }),
             credentials: self.credentials,
             pluginResultPolicy: ProviderPluginResultPolicy(cardMapper: mapPluginCard),
             config: ProviderConfigCapabilities(workspaceIDValidationOrder: 1),
@@ -61,11 +65,20 @@ public enum OpenAIAPIProviderDescriptor {
                 chartCalendar: CostUsageBucketTimeZone.calendar(identifier: "UTC")),
             presentation: ProviderUsagePresentation(
                 costPresenter: { snapshot in
+                    if snapshot.openAIAPIUsage == nil, snapshot.providerCost?.period == "API credits",
+                       let cost = snapshot.providerCost, let balance = cost.balance
+                    {
+                        return ProviderCostPresentation(
+                            showsGenericFallback: false,
+                            balances: [.init(label: "API credits", amount: balance, currencyCode: cost.currencyCode)],
+                            menuCardStyle: .prepaidCredits)
+                    }
                     let style: ProviderCostMenuCardStyle = (snapshot.providerCost?.limit ?? 1) <= 0
                         ? .apiSpend
                         : .generic
                     return ProviderCostPresentation(menuCardStyle: style)
                 },
+                menuBarBalanceUsesPrepaidCost: true,
                 menuCard: ProviderMenuCardPresentation(
                     usageNotesResolver: { context in
                         context.snapshot?.openAIAPIUsage.map(ProviderUsageNotesResolution.openAIAPI) ?? .unhandled
@@ -88,9 +101,12 @@ public enum OpenAIAPIProviderDescriptor {
     }
 
     private static func fetchPlan() -> ProviderFetchPlan {
-        ProviderFetchPlan(sourceModes: [.auto, .api], pipeline: ProviderFetchPipeline(resolveStrategies: { _ in
-            [Self.scriptStrategy()]
-        }))
+        ProviderFetchPlan(
+            sourceModes: [.auto, .api, .web],
+            pipeline: ProviderFetchPipeline(resolveStrategies: { context in
+                if context.sourceMode == .web { return [OpenAIWebFetchStrategy()] }
+                return [Self.scriptStrategy()]
+            }))
     }
 
     static func scriptStrategy(transport: any ProviderHTTPTransport = ProviderHTTPClient

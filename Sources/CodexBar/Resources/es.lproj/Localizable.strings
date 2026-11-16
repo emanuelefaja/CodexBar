@@ -1,4 +1,13 @@
 /* Spanish localization for CodexBar */
+
+/* OpenAI browser credits (fork English fallback). */
+"org-..." = "org-...";
+"API" = "API";
+"Auto and API use API keys. Web reads credits from a selected Chrome profile and organization." = "Auto and API use API keys. Web reads credits from a selected Chrome profile and organization.";
+"Chrome profile" = "Chrome profile";
+"Select an existing Chrome profile signed in to OpenAI Platform. No profile is selected automatically." = "Select an existing Chrome profile signed in to OpenAI Platform. No profile is selected automatically.";
+"Required. If auth expires, refresh Platform in this Chrome profile, then refresh CodexBar." = "Required. If auth expires, refresh Platform in this Chrome profile, then refresh CodexBar.";
+"Web" = "Web";
 "Copilot subscription ended" = "La suscripción a Copilot ha finalizado";
 
 /* iCloud Sync */
