@@ -52,7 +52,13 @@ public enum BrowserCookieAccessGate {
     private static let cooldownInterval: TimeInterval = 60 * 60 * 6
     private static let log = CodexBarLog.logger(LogCategories.browserCookieGate)
     @TaskLocal private static var explicitRetryScope: ExplicitRetryScope?
-    @TaskLocal private static var accessFailureObserver: (@Sendable (Browser, Bool) -> Void)?
+    /// Swift 6.3.2 can emit null metadata for an optional closure TaskLocal in optimized builds.
+    /// A nominal value preserves the same scoped callback without that runtime crash.
+    private struct AccessFailureObserver: Sendable {
+        let callback: @Sendable (Browser, Bool) -> Void
+    }
+
+    @TaskLocal private static var accessFailureObserver: AccessFailureObserver?
     @TaskLocal private static var deniedBrowsersForTesting: [Browser]?
     #if DEBUG
     @TaskLocal private static var shouldAttemptOverrideForTesting: Bool?
@@ -98,11 +104,11 @@ public enum BrowserCookieAccessGate {
         _ observer: @escaping @Sendable (Browser, Bool) -> Void,
         operation: () throws -> T) rethrows -> T
     {
-        try self.$accessFailureObserver.withValue(observer, operation: operation)
+        try self.$accessFailureObserver.withValue(AccessFailureObserver(callback: observer), operation: operation)
     }
 
     static func recordAccessFailure(for browser: Browser, profileDenied: Bool = false) {
-        self.accessFailureObserver?(browser, profileDenied)
+        self.accessFailureObserver?.callback(browser, profileDenied)
     }
 
     private static func shouldAttemptWithPolicy(_ browser: Browser, now: Date) -> Bool {

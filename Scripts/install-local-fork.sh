@@ -52,6 +52,38 @@ if ! mv "$STAGE" "$APP"; then
   [[ ! -e "$APP" && -d "$BACKUP/CodexBar.app" ]] && mv "$BACKUP/CodexBar.app" "$APP"
   exit 1
 fi
-open -n "$APP"
-printf 'Installed local fork. Rollback app and private settings: %s\n' "$BACKUP"
+launch_ok=1
+open -n "$APP" || launch_ok=0
+PID=""
+for _ in {1..10}; do
+  PID="$(pgrep -f '^/Applications/CodexBar\.app/Contents/MacOS/CodexBar( |$)' || true)"
+  [[ -n "$PID" ]] && break
+  sleep 1
+done
+if [[ -z "$PID" ]]; then
+  launch_ok=0
+else
+  for _ in {1..30}; do
+    if ! kill -0 "$PID" 2>/dev/null; then
+      launch_ok=0
+      break
+    fi
+    sleep 1
+  done
+fi
+if [[ "$launch_ok" != "1" ]]; then
+  echo "Installed fork failed its normal-startup check; restoring the previous app." >&2
+  # Do not leave a partial launch running while restoring its executable.
+  if [[ -n "$PID" ]] && kill -0 "$PID" 2>/dev/null; then
+    echo "A fork process is still running; stop it before restoring from $BACKUP." >&2
+    exit 1
+  fi
+  mv "$APP" "$BACKUP/failed-fork.app"
+  if [[ -d "$BACKUP/CodexBar.app" ]]; then
+    ditto "$BACKUP/CodexBar.app" "$APP"
+    open -n "$APP"
+  fi
+  exit 1
+fi
+printf 'Installed local fork; normal startup survived 30 seconds. Rollback app and private settings: %s\n' "$BACKUP"
 printf 'A changed signature may require renewed browser/Full Disk Access permission.\n'
