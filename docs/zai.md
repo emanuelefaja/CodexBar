@@ -148,7 +148,7 @@ Copy each value once, on one line. Multi-line or duplicated IDs can make the API
 - Window duration:
   - Unit + number → minutes/hours/days.
 - Reset:
-  - `nextResetTime` (epoch ms) → date.
+  - `nextResetTime` (epoch ms) → date. A zero-used five-hour window can report `null`; keep its reported allowance and show an unknown reset rather than inventing a countdown.
   - Five-hour Coding Plan resets more than five hours plus one minute of clock skew in the future are omitted, including incompatible cached resets. Usage percentages remain visible; no timezone correction is guessed. Weekly and MCP reset semantics are unchanged.
 - Usage details:
   - `usageDetails[]` per model (MCP usage list).
