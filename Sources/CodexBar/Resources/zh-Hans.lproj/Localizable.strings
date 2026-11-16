@@ -2811,3 +2811,19 @@
 "Tripo is rate limiting requests. Try again later." = "Tripo 正在限制请求频率。请稍后重试。";
 "Tripo request failed. Try refreshing later." = "Tripo 请求失败。请稍后尝试刷新。";
 "Tripo returned an unrecognized response. Update CodexBar and try again." = "Tripo 返回了无法识别的响应。请更新 CodexBar 后重试。";
+
+/* English fallback for the private compact-dashboard fork. */
+"ACCOUNT" = "ACCOUNT";
+"LIMIT" = "LIMIT";
+"LEFT" = "LEFT";
+"RESET" = "RESET";
+"Percentages show remaining quota." = "Percentages show remaining quota.";
+"Stale" = "Stale";
+"sessionKey or Cookie header" = "sessionKey or Cookie header";
+"Organization ID (optional for a sole API organization)" = "Organization ID (optional for a sole API organization)";
+"Connect a browser profile or paste a Console session cookie. Pin each account to its organization." = "Connect a browser profile or paste a Console session cookie. Pin each account to its organization.";
+"Read only this profile. No other browser or account is tried." = "Read only this profile. No other browser or account is tried.";
+"Manual cookie" = "Manual cookie";
+"Connection" = "Connection";
+"API BALANCES" = "API BALANCES";
+"Back to overview" = "Back to overview";

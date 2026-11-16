@@ -15,7 +15,8 @@ extension UsageStore {
     func shouldFetchAllTokenAccounts(provider: UsageProvider, accounts: [ProviderTokenAccount]) -> Bool {
         guard TokenAccountSupportCatalog.support(for: provider) != nil else { return false }
         guard self.settings.effectiveSelectedTokenAccount(for: provider) != nil else { return false }
-        return self.settings.accountWidgetsEnabled && !accounts.isEmpty
+        // The compact merged menu exposes every saved account, including segmented detail layouts.
+        return (self.settings.mergeIcons || self.settings.accountWidgetsEnabled) && !accounts.isEmpty
             || self.settings.multiAccountMenuLayout == .stacked && accounts.count > 1
     }
 
@@ -24,7 +25,8 @@ extension UsageStore {
         // every row and then reject its whoami identity against other accounts.
         guard !self.shouldUseAmbientCodexPATForUsage() else { return false }
         let projection = self.freshCodexVisibleAccountProjectionForAccountRefresh()
-        return (self.settings.multiAccountMenuLayout == .stacked || self.settings.accountWidgetsEnabled)
+        return (self.settings.mergeIcons || self.settings.multiAccountMenuLayout == .stacked
+            || self.settings.accountWidgetsEnabled)
             && projection.visibleAccounts.count > 1
     }
 }

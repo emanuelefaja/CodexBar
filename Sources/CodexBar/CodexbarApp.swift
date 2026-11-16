@@ -360,24 +360,9 @@ private func isDeveloperIDSigned(bundleURL: URL) -> Bool {
 
 @MainActor
 private func makeUpdaterController() -> UpdaterProviding {
-    let bundleURL = Bundle.main.bundleURL
-    guard bundleURL.pathExtension == "app" else {
-        return DisabledUpdaterController(unavailableReason: "Updates unavailable in this build.")
-    }
-
-    if InstallOrigin.isHomebrewCask(appBundleURL: bundleURL) {
-        return HomebrewUpdaterController(
-            savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true,
-            notifier: HomebrewUpdateNotifier(dependencies: .live))
-    }
-
-    guard isDeveloperIDSigned(bundleURL: bundleURL) else {
-        return DisabledUpdaterController(unavailableReason: "Updates unavailable in this build.")
-    }
-
-    // Both choices default to on for first launch; Sparkle preserves the saved automatic-install choice.
-    return SparkleUpdaterController(
-        savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true)
+    // This fork is installed over the upstream app so existing local settings keep working.
+    // Neither Sparkle nor the Homebrew updater may replace it with an upstream release.
+    DisabledUpdaterController(unavailableReason: "Local fork. Update from the fork checkout.")
 }
 #else
 private func makeUpdaterController() -> UpdaterProviding {

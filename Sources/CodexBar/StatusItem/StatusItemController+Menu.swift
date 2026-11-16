@@ -234,6 +234,10 @@ extension StatusItemController {
         let includesOverview = self.includesOverviewTab(enabledProviders: enabledProviders)
         let switcherSelection = self.resolvedMergedMenuSelection(enabledProviders: enabledProviders)
         let isOverviewSelected = switcherSelection == .overview
+        if self.shouldMergeIcons, isOverviewSelected {
+            self.populateCompactOverview(menu, enabledProviders: enabledProviders)
+            return
+        }
         let isPluginSelected = Self.isUserPluginSelection(switcherSelection)
         let selectedProvider: UsageProvider? = switch switcherSelection {
         case .overview: self.resolvedMenuProvider(enabledProviders: enabledProviders)
@@ -545,114 +549,46 @@ extension StatusItemController {
     }
 
     @discardableResult
-    private func addOverviewRows(
+    func addOverviewRows(
         to menu: NSMenu,
         enabledProviders: [UsageProvider],
         menuWidth: CGFloat,
         captureMenu: NSMenu? = nil) -> Bool
     {
-        // Rows may be built into a detached scratch menu for in-place reconciliation;
-        // interaction closures must always reference the live menu they end up serving.
         let interactionMenu = captureMenu ?? menu
-        let providerScopes = self.overviewProviderScopes(enabledProviders: enabledProviders)
-        let rows = self.store.mergedOverviewRows(for: providerScopes.visible)
-        guard !rows.isEmpty else { return false }
-
-        let t0 = CACurrentMediaTime()
-        defer { self.logChartRenderDurationIfSlow("addOverviewRows(\(rows.count))", startedAt: t0) }
-
-        let spendProviders = providerScopes.spend
-        let spendModel = self.overviewSpendDashboardModel(providers: spendProviders)
-        let spendProviderCount = self.overviewSpendSubscriptionCount(providers: spendProviders)
-        if spendProviderCount > 0 {
-            let knownCounts = self.overviewSpendKnownSubscriptionCounts(
-                providers: spendProviders,
-                model: spendModel)
-            let spendSummary = OverviewSpendSummary(
-                model: spendModel,
-                providerCount: spendProviderCount,
-                knownCostProviderCount: knownCounts.cost,
-                knownTokenProviderCount: knownCounts.tokens)
-            let summaryItem = self.makeMenuCardItem(
-                OverviewSpendSummaryCardView(
-                    summary: spendSummary,
-                    days: spendModel.requestedDays,
-                    width: menuWidth),
-                id: "overviewSpendSummary",
-                width: menuWidth,
-                heightCacheScope: "overviewSpendSummary",
-                heightCacheFingerprint: [
-                    spendSummary.primarySpendText,
-                    spendSummary.providerCoverageText,
-                    spendSummary.tokenText ?? "",
-                    spendSummary.historyCoverageText,
-                    spendSummary.pricingCoverageText,
-                    spendSummary.provenanceText,
-                ].joined(separator: "|"))
-            menu.addItem(summaryItem)
-            if let shareItem = self.makeOverviewShareStatsMenuItem(model: spendModel) {
-                menu.addItem(shareItem)
-            }
-            menu.addItem(.separator())
+        let inputs = self.store.compactOverviewInputs(
+            for: self.overviewProviderIDs(enabledProviders: enabledProviders))
+        let model = CompactAccountsOverview(inputs: inputs, now: Date())
+        let updated = model.updatedAt.map {
+            "Updated " + $0.formatted(date: .omitted, time: .shortened)
+        } ?? "Unavailable"
+        let refresh = self.makePersistentRefreshItem(
+            title: "\(updated) · Refresh", menu: interactionMenu, width: 384)
+        menu.addItem(refresh)
+        self.persistentRefreshItems.add(refresh)
+        menu.addItem(.separator())
+        menu.addItem(self.makeMenuCardItem(
+            CompactAccountsHeading(), id: "compactOverviewHeading", width: 384))
+        func add(_ account: CompactAccountsOverview.Account, balance: Bool) {
+            menu.addItem(self.makeCompactOverviewAccountItem(
+                account, balance: balance, interactionMenu: interactionMenu))
         }
-
-        for (index, row) in rows.enumerated() {
-            let instanceID = row.provider
-            if index > 0 { menu.addItem(.separator()) }
-            let identifier = "\(Self.overviewRowIdentifierPrefix)\(row.id)"
-            guard let provider = instanceID.firstPartyProvider,
-                  let model = row.model
-            else {
-                if let plugin = UserProviderPluginRegistry.plugin(for: instanceID) {
-                    let item = self.makeUserPluginMenuCardItem(
-                        plugin,
-                        width: menuWidth,
-                        id: identifier,
-                        onClick: plugin.manifest.topLevel ? { [weak self, weak interactionMenu] in
-                            guard let self, let interactionMenu else { return }
-                            self.selectOverviewProvider(instanceID, menu: interactionMenu)
-                        } : nil)
-                    if plugin.manifest.topLevel {
-                        item.target = self
-                        item.action = #selector(self.selectOverviewProvider(_:))
-                    }
-                    menu.addItem(item)
-                }
-                continue
+        for account in model.accounts {
+            add(account, balance: false)
+        }
+        if !model.balances.isEmpty {
+            menu.addItem(.separator())
+            let heading = NSMenuItem(title: "API BALANCES", action: nil, keyEquivalent: "")
+            heading.isEnabled = false
+            menu.addItem(heading)
+            for account in model.balances {
+                add(account, balance: true)
             }
-            let storageText = row.accountID == nil ? self.store.storageFootprintText(for: provider) : nil
-            let submenu = row.accountID == nil ? self.makeOverviewRowSubmenu(
-                provider: provider,
-                model: model,
-                width: menuWidth) : nil
-            let item = self.makeMenuCardItem(
-                OverviewMenuCardRowView(
-                    model: model,
-                    storageText: storageText,
-                    width: menuWidth,
-                    layout: self.settings.mergedOverviewLayout),
-                id: identifier,
-                width: menuWidth,
-                heightCacheScope: provider.rawValue,
-                heightCacheFingerprint: model.heightFingerprint(
-                    section: "overview",
-                    additional: [
-                        UsageMenuCardView.Model.heightFingerprintField("storage", storageText),
-                        "layout=\(self.settings.mergedOverviewLayout.rawValue)",
-                    ]),
-                submenu: submenu,
-                containsInteractiveControls: model.containsInteractiveControls,
-                usesGPUSelection: true,
-                onClick: { [weak self, weak interactionMenu] in
-                    guard let self, let interactionMenu else { return }
-                    self.selectOverviewProvider(instanceID, menu: interactionMenu)
-                })
-            if submenu == nil {
-                // Keep plain rows wired for keyboard activation and accessibility action paths.
-                item.target = self
-                item.action = #selector(self.selectOverviewProvider(_:))
-            }
-            menu.addItem(item)
+        }
+        if inputs.isEmpty {
+            let unavailable = NSMenuItem(title: "Unavailable", action: nil, keyEquivalent: "")
+            unavailable.isEnabled = false
+            menu.addItem(unavailable)
         }
         return true
     }
@@ -813,6 +749,13 @@ extension StatusItemController {
         switcherSelection: ProviderSwitcherSelection,
         captureMenu: NSMenu? = nil)
     {
+        if self.shouldMergeIcons, switcherSelection != .overview {
+            let back = NSMenuItem(
+                title: "Back to overview", action: #selector(self.backToCompactOverview(_:)), keyEquivalent: "")
+            back.target = self
+            menu.addItem(back)
+            menu.addItem(.separator())
+        }
         if case let .provider(instanceID) = switcherSelection,
            UserProviderPluginRegistry.plugin(for: instanceID) != nil
         {
@@ -1105,7 +1048,7 @@ extension StatusItemController {
     }
 
     @discardableResult
-    private func handleCodexVisibleAccountSelection(_ account: CodexVisibleAccount, menu: NSMenu?) -> Bool {
+    func handleCodexVisibleAccountSelection(_ account: CodexVisibleAccount, menu: NSMenu?) -> Bool {
         // Provider-specific by design: managed Codex selection rebuilds after account-scoped reconciliation.
         let visibleAccountID = account.id
         self.advanceMenuInteraction(for: menu)

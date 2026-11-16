@@ -14,7 +14,7 @@ extension StatusItemController {
     /// main-actor tasks do not run during NSMenu tracking — a `Task.sleep`-based
     /// warmup would only ever fire after the menu closed, i.e. never usefully.
     func scheduleMergedSwitcherSiblingWarmup(for menu: NSMenu) {
-        guard self.isMenuRefreshEnabled else { return }
+        guard self.isMenuRefreshEnabled, self.compactOverviewShowsDetails else { return }
         guard self.shouldMergeIcons, menu === self.mergedMenu else { return }
         self.mergedSwitcherWarmupTimer?.invalidate()
         let menuKey = ObjectIdentifier(menu)

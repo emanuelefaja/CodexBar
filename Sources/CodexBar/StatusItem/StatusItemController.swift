@@ -44,7 +44,8 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
     static var menuCardRenderingEnabled = !SettingsStore.isRunningTests
     private static let defaultMenuRefreshEnabled = !SettingsStore.isRunningTests
     private(set) static var menuRefreshEnabled = !SettingsStore.isRunningTests
-    static let quotaWarningFlashDuration: TimeInterval = 60
+    // The fork opens on the compact overview; provider details are an explicit navigation state.
+    var compactOverviewShowsDetails = false
     private nonisolated static let statusItemAccessibilityTitle = "CodexBar"
     private nonisolated static let debugStatusItemAccessibilityTitle = "CodexBar Debug"
     private nonisolated static let statusItemAccessibilityIdentifierPrefix = "CodexBar.StatusItem"

@@ -85,26 +85,49 @@ struct ClaudePlatformPluginTests {
     }
 
     @Test(arguments: BundledPluginTestSupport.engines)
-    func `a forbidden api organization falls through to the next readable one`(
+    func `multiple organizations require a pin and denied pins never fall through`(
         engine: ProviderPluginEngineKind) async throws
     {
-        let fixture = Fixture(
-            organizations: """
-            [{"uuid":"\(Self.chatOrganization)","name":"Synthetic Chat Organization","capabilities":["chat"]},
-             {"uuid":"\(Self.apiOrganization)","name":"Synthetic Member Org","capabilities":["api"]},
-             {"uuid":"\(Self.otherAPIOrganization)","name":"Synthetic Owner Org","capabilities":["api"]}]
-            """,
-            creditsStatus: [Self.apiOrganization: 403])
-        let usage = try await Self.fetch(engine, fixture: fixture)
-        #expect(usage.providerCost?.balance == 187.25)
+        let organizations = """
+        [{"uuid":"\(Self.apiOrganization)","name":"Synthetic Member Org","capabilities":["api"]},
+         {"uuid":"\(Self.otherAPIOrganization)","name":"Synthetic Owner Org","capabilities":["api"]}]
+        """
+        let ambiguous = Fixture(organizations: organizations)
+        await #expect {
+            try await Self.fetch(engine, fixture: ambiguous)
+        } throws: { ($0 as? ProviderFetchClassifiedError)?.kind == .permissionDenied }
+        #expect(await ambiguous.paths == ["/api/organizations"])
+
+        let denied = Fixture(organizations: organizations, creditsStatus: [Self.apiOrganization: 403])
+        await #expect {
+            try await Self.fetch(engine, fixture: denied, organizationID: Self.apiOrganization)
+        } throws: { ($0 as? ProviderFetchClassifiedError)?.kind == .permissionDenied }
+        #expect(await denied.paths == [
+            "/api/organizations", "/api/organizations/\(Self.apiOrganization)/prepaid/credits",
+        ])
+
+        let pinned = Fixture(organizations: organizations)
+        let usage = try await Self.fetch(engine, fixture: pinned, organizationID: Self.otherAPIOrganization)
         #expect(usage.identity?.accountOrganization == "Synthetic Owner Org")
-        #expect(await fixture.paths == [
+        #expect(usage.detailRow(label: "Organization ID")?.value == Self.otherAPIOrganization)
+        #expect(await pinned.paths == [
             "/api/organizations",
-            "/api/organizations/\(Self.apiOrganization)/prepaid/credits",
             "/api/organizations/\(Self.otherAPIOrganization)/prepaid/credits",
             "/api/organizations/\(Self.otherAPIOrganization)/current_spend",
         ])
-        #expect(await fixture.rejections == 0)
+    }
+
+    @Test(arguments: BundledPluginTestSupport.engines)
+    func `missing or chat organization pins never request another organizations billing`(
+        engine: ProviderPluginEngineKind) async throws
+    {
+        for target in [Self.otherAPIOrganization, Self.chatOrganization, "../invalid"] {
+            let fixture = Fixture()
+            await #expect {
+                try await Self.fetch(engine, fixture: fixture, organizationID: target)
+            } throws: { ($0 as? ProviderFetchClassifiedError)?.kind == .permissionDenied }
+            #expect(await fixture.paths == ["/api/organizations"])
+        }
     }
 
     @Test(arguments: BundledPluginTestSupport.engines)
@@ -114,14 +137,23 @@ struct ClaudePlatformPluginTests {
         let credits = Self.credits(
             promo: [
                 Self.grant(
-                    name: "API credit (Max 20x)", program: "subscription_api_credit",
-                    remaining: 15000, granted: 20000, expires: "2026-11-12T00:00:00Z"),
+                    name: "API credit (Max 20x)",
+                    program: "subscription_api_credit",
+                    remaining: 15000,
+                    granted: 20000,
+                    expires: "2026-11-12T00:00:00Z"),
                 Self.grant(
-                    name: "API credit (Pro)", program: "subscription_api_credit",
-                    remaining: 0, granted: 5000, expires: "2026-10-20T00:00:00Z"),
+                    name: "API credit (Pro)",
+                    program: "subscription_api_credit",
+                    remaining: 0,
+                    granted: 5000,
+                    expires: "2026-10-20T00:00:00Z"),
                 Self.grant(
-                    name: "Launch credit", program: "promo",
-                    remaining: 1000, granted: 1000, expires: "2026-10-31Tnot-a-date"),
+                    name: "Launch credit",
+                    program: "promo",
+                    remaining: 1000,
+                    granted: 1000,
+                    expires: "2026-10-31Tnot-a-date"),
             ].joined(separator: ","),
             tranches: Self.grant(
                 name: nil, program: "api_credits", remaining: 2500, granted: 5000, expires: nil))
@@ -155,16 +187,25 @@ struct ClaudePlatformPluginTests {
             promo: [
                 // Expiring exactly now counts as expired.
                 Self.grant(
-                    name: "API credit (Max 5x)", program: "subscription_api_credit",
-                    remaining: 5000, granted: 10000, expires: "2026-10-13T00:00:00Z"),
+                    name: "API credit (Max 5x)",
+                    program: "subscription_api_credit",
+                    remaining: 5000,
+                    granted: 10000,
+                    expires: "2026-10-13T00:00:00Z"),
                 Self.grant(
-                    name: "API credit (Pro)", program: "subscription_api_credit",
-                    remaining: 0, granted: 5000, expires: "2026-10-20T00:00:00Z"),
+                    name: "API credit (Pro)",
+                    program: "subscription_api_credit",
+                    remaining: 0,
+                    granted: 5000,
+                    expires: "2026-10-20T00:00:00Z"),
             ].joined(separator: ","),
             tranches: [
                 Self.grant(
-                    name: nil, program: "api_credits",
-                    remaining: 4000, granted: 4000, expires: "2026-10-12T00:00:00Z"),
+                    name: nil,
+                    program: "api_credits",
+                    remaining: 4000,
+                    granted: 4000,
+                    expires: "2026-10-12T00:00:00Z"),
                 Self.grant(name: nil, program: "api_credits", remaining: 2500, granted: 5000, expires: nil),
             ].joined(separator: ","))
         let usage = try await Self.fetch(engine, fixture: Fixture(credits: credits))
@@ -180,8 +221,11 @@ struct ClaudePlatformPluginTests {
             exponent: 3,
             amount: 187_250,
             promo: Self.grant(
-                name: nil, program: "subscription_api_credit",
-                remaining: 124_750, granted: 200_000, expires: "2026-10-28T00:00:00Z"),
+                name: nil,
+                program: "subscription_api_credit",
+                remaining: 124_750,
+                granted: 200_000,
+                expires: "2026-10-28T00:00:00Z"),
             tranches: "")
         let usage = try await Self.fetch(engine, fixture: Fixture(credits: credits, spend: #"{"amount":43210}"#))
         #expect(usage.providerCost?.balance == 187.25)
@@ -324,9 +368,14 @@ struct ClaudePlatformPluginTests {
         #expect(policy.requiredCookies == ["sessionKey"])
     }
 
-    private static func fetch(_ engine: ProviderPluginEngineKind, fixture: Fixture) async throws -> UsageSnapshot {
+    private static func fetch(
+        _ engine: ProviderPluginEngineKind,
+        fixture: Fixture,
+        organizationID: String? = nil) async throws -> UsageSnapshot
+    {
         let runtime = try BundledPluginTestSupport.runtime("claudeplatform", engine: engine, transport: fixture)
         return try await runtime.fetchUsage(
+            settings: organizationID.map { ["organizationId": $0] } ?? [:],
             now: Self.now,
             cookieSessionResolver: { _, _ in await fixture.nextSession() },
             cookieSessionInvalidator: { _, _ in fixture.rejected.increment() })

@@ -2787,3 +2787,19 @@
 "Tripo is rate limiting requests. Try again later." = "Tripo가 요청 빈도를 제한하고 있습니다. 나중에 다시 시도하세요.";
 "Tripo request failed. Try refreshing later." = "Tripo 요청에 실패했습니다. 나중에 다시 새로 고침하세요.";
 "Tripo returned an unrecognized response. Update CodexBar and try again." = "Tripo가 알 수 없는 응답을 반환했습니다. CodexBar를 업데이트하고 다시 시도하세요.";
+
+/* English fallback for the private compact-dashboard fork. */
+"ACCOUNT" = "ACCOUNT";
+"LIMIT" = "LIMIT";
+"LEFT" = "LEFT";
+"RESET" = "RESET";
+"Percentages show remaining quota." = "Percentages show remaining quota.";
+"Stale" = "Stale";
+"sessionKey or Cookie header" = "sessionKey or Cookie header";
+"Organization ID (optional for a sole API organization)" = "Organization ID (optional for a sole API organization)";
+"Connect a browser profile or paste a Console session cookie. Pin each account to its organization." = "Connect a browser profile or paste a Console session cookie. Pin each account to its organization.";
+"Read only this profile. No other browser or account is tried." = "Read only this profile. No other browser or account is tried.";
+"Manual cookie" = "Manual cookie";
+"Connection" = "Connection";
+"API BALANCES" = "API BALANCES";
+"Back to overview" = "Back to overview";

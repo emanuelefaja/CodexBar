@@ -168,6 +168,8 @@ extension UsageStore {
             usageScope: account.usageScope,
             organizationID: account.organizationID,
             workspaceID: account.workspaceID,
+            browserID: account.browserID,
+            browserProfileID: account.browserProfileID,
             seatCreditEntitlement: account.seatCreditEntitlement)
         return self.tokenAccountSnapshotCacheKey(provider: provider, account: scoped)
     }

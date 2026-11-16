@@ -1,7 +1,7 @@
 defineProvider({
   id: "claudeplatform",
   name: "Claude Platform",
-  settings: [],
+  settings: [{ key: "organizationId", title: "Organization ID", type: "plain" }],
   endpoints: ["https://platform.claude.com"],
   capabilities: ["browser-cookies", "http-status"],
   cookieDomains: ["platform.claude.com"],
@@ -10,6 +10,8 @@ defineProvider({
     cache: "nonpersistent",
     imports: "access-gated",
     requiredCookies: ["sessionKey"],
+    store: "selected-profile-if-configured",
+    sessionURL: "https://platform.claude.com/api/organizations",
   },
   async fetchUsage(ctx) {
     const domain = "platform.claude.com";
@@ -106,21 +108,24 @@ defineProvider({
             "This Claude account has no Claude Console API organization. Create one at platform.claude.com.",
           );
 
-        // Try API organizations in listed order; the first one whose billing this member can read wins.
-        let selected: { id: string; name: string | undefined; credits: Record<string, unknown> } | undefined;
-        for (const candidate of candidates) {
-          try {
-            const credits = object(
-              await request(`/api/organizations/${candidate.id}/prepaid/credits`, billingDenied),
-              "credit balance",
-            );
-            selected = { ...candidate, credits };
-            break;
-          } catch (error) {
-            if (error !== billingDenied) throw error;
-          }
-        }
-        if (!selected) throw billingDenied;
+        const target = text(ctx.settings.get("organizationId"));
+        if (!target && candidates.length !== 1)
+          throw ctx.fail.permissionDenied(
+            "Multiple Claude Console API organizations found. Set organizationId explicitly.",
+          );
+        const candidate = target ? candidates.find((item) => item.id === target) : candidates[0];
+        if (!candidate)
+          throw ctx.fail.permissionDenied(
+            "The configured Claude Console organization is not available to this session.",
+          );
+        // Never try a different organization after a permission failure.
+        const selected = {
+          ...candidate,
+          credits: object(
+            await request(`/api/organizations/${candidate.id}/prepaid/credits`, billingDenied),
+            "credit balance",
+          ),
+        };
         const credits = selected.credits;
         const currency = text(credits.currency) ?? "USD";
         if (!/^[A-Z]{3}$/.test(currency)) return invalid("currency");
@@ -210,7 +215,7 @@ defineProvider({
           if ((error as CodexBarHTTPError).transportClass === "cancelled") throw error;
           spendRow = { label: "Spend", value: "Unavailable" };
         }
-        details.push({ title: "Billing", rows: [spendRow] });
+        details.push({ title: "Billing", rows: [spendRow, { label: "Organization ID", value: selected.id }] });
 
         return {
           primary,

@@ -243,6 +243,7 @@ struct ProviderSettingsTokenAccountsDescriptor: Identifiable {
     var claudeConfigDirectory: ((UUID) -> Binding<String?>)?
     var editAccount: ((_ accountID: UUID, _ label: String, _ token: String?) -> Void)?
     var moveAccount: ((_ accountID: UUID, _ destination: Int) -> Void)?
+    var saveBrowserAccount: ((UUID?, String, String, ProviderBrowserProfile?, String?) -> Void)?
 }
 
 /// Shared organizations descriptor rendered in the Providers settings pane.

@@ -66,6 +66,8 @@ extension UsageStore {
                 usageScope: account.usageScope,
                 organizationID: account.organizationID,
                 workspaceID: account.workspaceID,
+                browserID: account.browserID,
+                browserProfileID: account.browserProfileID,
                 seatCreditEntitlement: previousAccount.seatCreditEntitlement,
                 modelRateLimits: account.modelRateLimits)
             if cached.cacheKey == self.tokenAccountSnapshotCacheKey(

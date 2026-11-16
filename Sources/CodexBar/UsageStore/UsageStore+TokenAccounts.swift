@@ -626,6 +626,8 @@ extension UsageStore {
         _ accounts: [ProviderTokenAccount],
         selected: ProviderTokenAccount?) -> [ProviderTokenAccount]
     {
+        // Every saved account is visible in the compact overview, even beyond the old card cap.
+        if self.settings.mergeIcons { return accounts }
         let limit = Self.tokenAccountMenuSnapshotLimit
         if accounts.count <= limit {
             return accounts
@@ -647,6 +649,7 @@ extension UsageStore {
             accounts,
             snapshots: snapshots,
             activeVisibleAccountID: activeVisibleAccountID)
+        if self.settings.mergeIcons { return accounts }
         let limit = Self.tokenAccountMenuSnapshotLimit
         if accounts.count <= limit {
             return accounts

@@ -37,6 +37,12 @@ struct PluginCookieProviderImplementation: ProviderImplementation {
             _ = settings.providerConfig(for: self.id)?.browserID
             _ = settings.providerConfig(for: self.id)?.browserProfileID
         }
+        if self.web.settingsSection?.optionalSelectedProfileBrowsers != nil {
+            _ = settings.providerConfig(for: self.id)?.tokenAccounts
+            _ = settings.providerConfig(for: self.id)?.browserID
+            _ = settings.providerConfig(for: self.id)?.browserProfileID
+            _ = settings.providerConfig(for: self.id)?.organizationID
+        }
         _ = settings.resolvedCookieSource(provider: self.id, fallback: .auto)
         _ = settings[providerConfig: self.id, field: .cookieHeader]
         if self.spec.apiKeyField != nil { _ = settings[providerConfig: self.id, field: .apiKey] }
@@ -45,9 +51,11 @@ struct PluginCookieProviderImplementation: ProviderImplementation {
     @MainActor
     func settingsSnapshot(context: ProviderSettingsSnapshotContext) -> ProviderSettingsSnapshotContribution? {
         let section = ProviderDescriptorRegistry.descriptor(for: self.id).settingsSection
-        if section.selectedProfileBrowsers != nil {
+        if section.selectedProfileBrowsers != nil || section.optionalSelectedProfileBrowsers != nil {
             return section.credentialContribution(context: ProviderCredentialSettingsContext(
-                config: context.settings.providerConfig(for: self.id), account: nil))
+                config: context.settings.providerConfig(for: self.id),
+                account: ProviderTokenAccountSelection.selectedAccount(
+                    provider: self.id, settings: context.settings, override: context.tokenOverride)))
         }
         return section.cookieContribution?(context.settings.resolvedCookieSettings(
             provider: self.id, tokenOverride: context.tokenOverride)) ?? section.defaultContribution

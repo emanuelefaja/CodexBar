@@ -51,7 +51,9 @@ extension StatusItemController {
     }
 
     func selectOverviewProvider(_ provider: ProviderInstanceID, menu: NSMenu) {
-        if !self.settings.mergedMenuLastSelectedWasOverview, self.selectedMenuProvider == provider { return }
+        if self.compactOverviewShowsDetails,
+           !self.settings.mergedMenuLastSelectedWasOverview, self.selectedMenuProvider == provider { return }
+        self.compactOverviewShowsDetails = true
         self.preservingMergedSwitcherContentCachesDuringInvalidation {
             self.settings.mergedMenuLastSelectedWasOverview = false
             self.lastMergedSwitcherSelection = .provider(provider)

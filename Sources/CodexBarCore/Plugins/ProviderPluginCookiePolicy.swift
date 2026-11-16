@@ -37,6 +37,7 @@ public struct ProviderPluginCookiePolicy: Sendable {
     let imports: Imports
     let headerEcho: ProviderPluginCookieHeaderEcho?
     let selectedProfile: Bool
+    let optionalSelectedProfile: Bool
     let sessionURL: URL?
 
     init(_ value: any ProviderPluginValue, domains: Set<String>, endpoints: Set<ProviderPluginEndpoint>) throws {
@@ -74,7 +75,7 @@ public struct ProviderPluginCookiePolicy: Sendable {
             return url.host
         })
         if let store = value.property("store"), !store.isUndefined {
-            guard store.isString, store.stringValue() == "selected-profile",
+            guard store.isString, ["selected-profile", "selected-profile-if-configured"].contains(store.stringValue()),
                   cache == .nonpersistent, selection == .requestURL, self.imports == .accessGated,
                   !self.requiredCookies.isEmpty, self.requestHosts.count == 1,
                   let rawURL = value.property("sessionURL"), rawURL.isString,
@@ -83,10 +84,12 @@ public struct ProviderPluginCookiePolicy: Sendable {
                   endpoints.contains(.fixed(origin))
             else { throw invalid }
             self.selectedProfile = true
+            self.optionalSelectedProfile = store.stringValue() == "selected-profile-if-configured"
             self.sessionURL = url
         } else {
             guard value.property("sessionURL")?.isUndefined != false else { throw invalid }
             self.selectedProfile = false
+            self.optionalSelectedProfile = false
             self.sessionURL = nil
         }
         guard !self.requestHosts.isEmpty,

@@ -177,6 +177,11 @@ public struct ProviderBrowserProfile: Sendable, Equatable {
 }
 
 extension ProviderConfig {
+    public var organizationID: String? {
+        get { self.extensionValue(forKey: "organizationId") }
+        set { self.setExtensionValue(newValue, forKey: "organizationId") }
+    }
+
     public var browserID: String? {
         get { self.extensionValue(forKey: "browserID") }
         set { self.setExtensionValue(newValue, forKey: "browserID") }

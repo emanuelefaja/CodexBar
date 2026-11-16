@@ -68,11 +68,16 @@ extension SettingsStore {
         usageScope: String? = nil,
         organizationID: String? = nil,
         workspaceID: String? = nil,
+        browserID: String? = nil,
+        browserProfileID: String? = nil,
         claudeConfigDirectory: String? = nil)
     {
         guard TokenAccountSupportCatalog.support(for: provider) != nil else { return }
         let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedToken.isEmpty else { return }
+        // Provider-specific by design: Console browser accounts store a profile reference instead of copied cookies.
+        guard !trimmedToken.isEmpty || (provider == .claudeplatform &&
+            Self.normalizedConfigField(browserID) != nil &&
+            Self.normalizedConfigField(browserProfileID) != nil) else { return }
         let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let existing = self.tokenAccountsData(for: provider)
         let accounts = existing?.accounts ?? []
@@ -87,6 +92,8 @@ extension SettingsStore {
             usageScope: Self.normalizedConfigField(usageScope),
             organizationID: Self.normalizedConfigField(organizationID),
             workspaceID: Self.normalizedConfigField(workspaceID),
+            browserID: Self.normalizedConfigField(browserID),
+            browserProfileID: Self.normalizedConfigField(browserProfileID),
             claudeConfigDirectory: Self.normalizedConfigField(claudeConfigDirectory))
         let updated = ProviderTokenAccountData(
             version: existing?.version ?? 1,
@@ -116,6 +123,8 @@ extension SettingsStore {
         usageScope: String?? = nil,
         organizationID: String?? = nil,
         workspaceID: String?? = nil,
+        browserID: String?? = nil,
+        browserProfileID: String?? = nil,
         claudeConfigDirectory: String?? = nil,
         seatCreditEntitlement: String?? = nil)
     {
@@ -124,11 +133,15 @@ extension SettingsStore {
 
         let trimmedLabel = label?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedToken = token?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let trimmedToken, trimmedToken.isEmpty {
+        let existing = data.accounts[index]
+        let updatedBrowserID = browserID.map(Self.normalizedConfigField) ?? existing.browserID
+        let updatedProfileID = browserProfileID.map(Self.normalizedConfigField) ?? existing.browserProfileID
+        // Provider-specific by design: Only Console supports replacing its token with an explicit browser binding.
+        if (trimmedToken ?? existing.token).isEmpty,
+           !(provider == .claudeplatform && updatedBrowserID != nil && updatedProfileID != nil)
+        {
             return
         }
-
-        let existing = data.accounts[index]
         let updatesEffectiveAccount = self.effectiveSelectedTokenAccount(for: provider)?.id == accountID
         let updatedAccount = ProviderTokenAccount(
             id: existing.id,
@@ -140,6 +153,8 @@ extension SettingsStore {
             usageScope: usageScope.map(Self.normalizedConfigField) ?? existing.usageScope,
             organizationID: organizationID.map(Self.normalizedConfigField) ?? existing.organizationID,
             workspaceID: workspaceID.map(Self.normalizedConfigField) ?? existing.workspaceID,
+            browserID: updatedBrowserID,
+            browserProfileID: updatedProfileID,
             claudeConfigDirectory: claudeConfigDirectory.map(Self.normalizedConfigField)
                 ?? existing.claudeConfigDirectory,
             seatCreditEntitlement: seatCreditEntitlement.map(Self.normalizedConfigField)

@@ -80,6 +80,7 @@ public struct ProviderSettingsSnapshotContribution: Sendable {
 public struct ProviderSettingsSectionRegistration: Sendable {
     public private(set) var supportsConfigCookieHeader = false
     public private(set) var selectedProfileBrowsers: [String]?
+    public private(set) var optionalSelectedProfileBrowsers: [String]?
     public var selectedProfileBrowser: String? {
         guard let browsers = self.selectedProfileBrowsers, browsers.count == 1 else { return nil }
         return browsers[0]
@@ -104,6 +105,38 @@ public struct ProviderSettingsSectionRegistration: Sendable {
         self.defaultContribution = nil
         self.cookieSettingsReader = { _ in nil }
         self.credentialContributionReader = { _ in nil }
+    }
+
+    /// Supports explicit profiles without changing legacy Auto and manual-cookie behavior.
+    public init<Key: ProviderSettingsSectionKey>(_ key: Key.Type, optionalSelectedProfileBrowsers: [String])
+        where Key.Section == CookieProviderSettings
+    {
+        self.init(key, cookieSettings: { $0 }, credentialSettings: { context in
+            guard let provider = key.providerID.firstPartyProvider else { return nil }
+            var settings = context.cookieSettings(for: provider)
+            if let account = context.account {
+                // A saved manual account never inherits a provider's browser or organization.
+                let source: ProviderCookieSource = context.config?.cookieSource == .off ? .off :
+                    (account.selectedBrowserProfile == nil ? .manual : .auto)
+                settings = CookieProviderSettings(
+                    cookieSource: source,
+                    manualCookieHeader: account.selectedBrowserProfile == nil ? settings.manualCookieHeader : nil)
+                settings.selectedBrowserProfile = account.selectedBrowserProfile
+                settings.organizationID = account.sanitizedOrganizationID
+            } else {
+                if context.config?.extensionValues["browserID"] != nil ||
+                    context.config?.extensionValues["browserProfileID"] != nil
+                {
+                    settings.selectedBrowserProfile = ProviderBrowserProfile(
+                        browserID: context.config?.browserID ?? "",
+                        profileID: context.config?.browserProfileID ?? "")
+                }
+                settings.organizationID = context.config?.organizationID
+            }
+            return settings
+        })
+        self.optionalSelectedProfileBrowsers = optionalSelectedProfileBrowsers
+        self.cookieContribution = { ProviderSettingsSnapshotContribution($0, for: key) }
     }
 
     public init<Key: ProviderSettingsSectionKey>(_ key: Key.Type, selectedProfileBrowser: String)

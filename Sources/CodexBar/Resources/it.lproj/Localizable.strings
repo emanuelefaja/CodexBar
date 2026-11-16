@@ -2823,3 +2823,19 @@
 "Tripo is rate limiting requests. Try again later." = "Tripo sta limitando la frequenza delle richieste. Riprova più tardi.";
 "Tripo request failed. Try refreshing later." = "La richiesta a Tripo non è riuscita. Riprova ad aggiornare più tardi.";
 "Tripo returned an unrecognized response. Update CodexBar and try again." = "Tripo ha restituito una risposta sconosciuta. Aggiorna CodexBar e riprova.";
+
+/* English fallback for the private compact-dashboard fork. */
+"ACCOUNT" = "ACCOUNT";
+"LIMIT" = "LIMIT";
+"LEFT" = "LEFT";
+"RESET" = "RESET";
+"Percentages show remaining quota." = "Percentages show remaining quota.";
+"Stale" = "Stale";
+"sessionKey or Cookie header" = "sessionKey or Cookie header";
+"Organization ID (optional for a sole API organization)" = "Organization ID (optional for a sole API organization)";
+"Connect a browser profile or paste a Console session cookie. Pin each account to its organization." = "Connect a browser profile or paste a Console session cookie. Pin each account to its organization.";
+"Read only this profile. No other browser or account is tried." = "Read only this profile. No other browser or account is tried.";
+"Manual cookie" = "Manual cookie";
+"Connection" = "Connection";
+"API BALANCES" = "API BALANCES";
+"Back to overview" = "Back to overview";

@@ -18,6 +18,9 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
     /// Optional provider-specific workspace/project target. z.ai team accounts
     /// use this for the BigModel project header.
     public let workspaceID: String?
+    /// Explicit browser-store identity. No cookie is stored for browser accounts.
+    public let browserID: String?
+    public let browserProfileID: String?
     /// User-declared Claude history ownership; never used to resolve credentials.
     public let claudeConfigDirectory: String?
     /// Optional provider-specific AI credit allowance (raw user-entered value). Copilot accounts
@@ -39,6 +42,8 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
         case usageScope
         case organizationID = "organizationId"
         case workspaceID
+        case browserID
+        case browserProfileID
         case claudeConfigDirectory
         case seatCreditEntitlement
         case modelRateLimits
@@ -54,6 +59,8 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
         usageScope: String? = nil,
         organizationID: String? = nil,
         workspaceID: String? = nil,
+        browserID: String? = nil,
+        browserProfileID: String? = nil,
         claudeConfigDirectory: String? = nil,
         seatCreditEntitlement: String? = nil,
         modelRateLimits: [ProviderModelRateLimit]? = nil)
@@ -67,6 +74,8 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
         self.usageScope = usageScope
         self.organizationID = organizationID
         self.workspaceID = workspaceID
+        self.browserID = browserID
+        self.browserProfileID = browserProfileID
         self.claudeConfigDirectory = claudeConfigDirectory
         self.seatCreditEntitlement = seatCreditEntitlement
         self.modelRateLimits = modelRateLimits.map(ProviderModelRateLimit.validated)
@@ -84,6 +93,8 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
             usageScope: container.decodeIfPresent(String.self, forKey: .usageScope),
             organizationID: container.decodeIfPresent(String.self, forKey: .organizationID),
             workspaceID: container.decodeIfPresent(String.self, forKey: .workspaceID),
+            browserID: container.decodeIfPresent(String.self, forKey: .browserID),
+            browserProfileID: container.decodeIfPresent(String.self, forKey: .browserProfileID),
             claudeConfigDirectory: container.decodeIfPresent(String.self, forKey: .claudeConfigDirectory),
             seatCreditEntitlement: container.decodeIfPresent(String.self, forKey: .seatCreditEntitlement),
             modelRateLimits: container.decodeIfPresent([ProviderModelRateLimit].self, forKey: .modelRateLimits))
@@ -100,9 +111,17 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
             usageScope: self.usageScope,
             organizationID: self.organizationID,
             workspaceID: self.workspaceID,
+            browserID: self.browserID,
+            browserProfileID: self.browserProfileID,
             claudeConfigDirectory: self.claudeConfigDirectory,
             seatCreditEntitlement: self.seatCreditEntitlement,
             modelRateLimits: limits)
+    }
+
+    /// Even an incomplete selection stays explicit, so it fails closed instead of using Auto.
+    public var selectedBrowserProfile: ProviderBrowserProfile? {
+        guard self.browserID != nil || self.browserProfileID != nil else { return nil }
+        return ProviderBrowserProfile(browserID: self.browserID ?? "", profileID: self.browserProfileID ?? "")
     }
 
     public var displayName: String {
@@ -141,6 +160,8 @@ public struct ProviderTokenAccount: Codable, Identifiable, Sendable {
             usageScope: self.usageScope,
             organizationID: self.organizationID,
             workspaceID: self.workspaceID,
+            browserID: self.browserID,
+            browserProfileID: self.browserProfileID,
             claudeConfigDirectory: self.claudeConfigDirectory,
             seatCreditEntitlement: self.seatCreditEntitlement,
             modelRateLimits: self.modelRateLimits)

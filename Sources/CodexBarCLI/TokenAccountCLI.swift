@@ -244,6 +244,8 @@ struct TokenAccountCLIContext {
                 usageScope: existing.usageScope,
                 organizationID: existing.organizationID,
                 workspaceID: existing.workspaceID,
+                browserID: existing.browserID,
+                browserProfileID: existing.browserProfileID,
                 claudeConfigDirectory: existing.claudeConfigDirectory,
                 seatCreditEntitlement: existing.seatCreditEntitlement,
                 modelRateLimits: existing.modelRateLimits)

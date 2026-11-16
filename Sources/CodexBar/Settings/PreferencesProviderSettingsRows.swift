@@ -246,6 +246,14 @@ struct ProviderSettingsTokenAccountsRowView: View {
     @State private var editToken = ""
 
     var body: some View {
+        if self.descriptor.saveBrowserAccount != nil {
+            ProviderBrowserAccountsSection(descriptor: self.descriptor)
+        } else {
+            self.tokenBody
+        }
+    }
+
+    private var tokenBody: some View {
         Section {
             let accounts = self.descriptor.accounts()
             if accounts.isEmpty {

@@ -346,7 +346,7 @@ interface CodexBarProviderDefinition {
     missingCookies?: "reject" | "omit";
     imports?: "app-interactive" | "access-gated";
     /** Restrict reads to the configured browser profile and revalidate ownership before publication. */
-    store?: "selected-profile";
+    store?: "selected-profile" | "selected-profile-if-configured";
     /** URL whose requiredCookies establish session ownership; required for selected-profile. */
     sessionURL?: string;
     sessionFile?: { tokenField: string; cookieName: string };

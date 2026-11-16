@@ -2,7 +2,16 @@ import Foundation
 
 public enum ClaudePlatformProviderDescriptor {
     package static let webTimeout: TimeInterval = 60
-    public static let descriptor: ProviderDescriptor = Self.spec.makeDescriptor()
+    public static let descriptor: ProviderDescriptor = Self.spec.makeDescriptor(credentials: ProviderCredentialAdapter(
+        tokenAccountSupport: TokenAccountSupport(
+            title: "Accounts",
+            subtitle: "Connect a browser profile or paste a Console session cookie. "
+                + "Pin each account to its organization.",
+            placeholder: "sessionKey or Cookie header",
+            injection: .cookieHeader,
+            requiresManualCookieSource: false,
+            cookieName: "sessionKey",
+            showsOrganizationField: true)))
     public static let spec = PluginProviderSpec(
         id: .claudeplatform,
         displayName: "Claude Platform",
@@ -36,11 +45,16 @@ public enum ClaudePlatformProviderDescriptor {
         webSource: .init(
             settingsSection: .init(
                 ClaudePlatformProviderSettingsKey.self,
-                cookieSettings: CookieProviderSettings.self),
+                optionalSelectedProfileBrowsers: ProviderBrowserCookieDefaults.browserIDs),
             browserCookieOrder: ProviderBrowserCookieDefaults.defaultImportOrder,
             timeout: .fixed(Self.webTimeout),
             browserSupportExemption: { _, _, settings in
                 settings?[ClaudePlatformProviderSettingsKey.self]?.cookieSource == .manual
+            },
+            resolveValues: { context in
+                .init(settings: [
+                    "organizationId": context.settings?[ClaudePlatformProviderSettingsKey.self]?.organizationID ?? "",
+                ])
             },
             field: .init(
                 id: "claudeplatform-cookie",

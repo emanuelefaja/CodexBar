@@ -280,6 +280,14 @@ public enum ProviderDefaults {
 }
 
 public enum ProviderBrowserCookieDefaults {
+    public static var browserIDs: [String] {
+        #if os(macOS)
+        Browser.defaultImportOrder.map(\.rawValue)
+        #else
+        []
+        #endif
+    }
+
     public static var defaultImportOrder: BrowserCookieImportOrder? {
         #if os(macOS)
         Browser.defaultImportOrder

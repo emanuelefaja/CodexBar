@@ -6,7 +6,7 @@ import SwiftUI
 extension StatusItemController {
     var shouldMergeIcons: Bool {
         self.settings.mergeIcons && (
-            self.store.enabledProvidersForDisplay().count > 1 ||
+            !self.store.enabledProvidersForDisplay().isEmpty ||
                 !self.topLevelUserProviderPlugins().isEmpty)
     }
 
@@ -43,17 +43,14 @@ extension StatusItemController {
     }
 
     func includesOverviewTab(enabledProviders: [UsageProvider]) -> Bool {
-        self.switcherProviderIDs(enabledFirstPartyProviders: enabledProviders).count > 1 &&
-            !self.settings.resolvedMergedOverviewProviders(
-                activeProviders: self.overviewProviderIDs(enabledProviders: enabledProviders),
-                maxVisibleProviders: SettingsStore.mergedOverviewProviderLimit).isEmpty
+        !self.overviewProviderIDs(enabledProviders: enabledProviders).isEmpty
     }
 
     func resolvedSwitcherSelection(
         enabledProviders: [UsageProvider],
         includesOverview: Bool) -> ProviderSwitcherSelection
     {
-        if includesOverview, self.settings.mergedMenuLastSelectedWasOverview {
+        if includesOverview, !self.compactOverviewShowsDetails || self.settings.mergedMenuLastSelectedWasOverview {
             return .overview
         }
         let providerIDs = self.switcherProviderIDs(enabledFirstPartyProviders: enabledProviders)

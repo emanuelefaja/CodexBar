@@ -524,6 +524,34 @@ struct ProvidersPane: View {
         descriptor.moveAccount = { accountID, destination in
             self.settings.moveTokenAccount(provider: provider, accountID: accountID, to: destination)
         }
+        // Provider-specific by design: Console accounts bind a browser store and billing organization, not an API key.
+        if provider == .claudeplatform {
+            descriptor.saveBrowserAccount = { accountID, label, token, profile, organizationID in
+                if let accountID {
+                    self.settings.updateTokenAccount(
+                        provider: provider,
+                        accountID: accountID,
+                        label: label,
+                        token: profile != nil ? "" : (token.isEmpty ? nil : token),
+                        organizationID: .some(organizationID),
+                        browserID: .some(profile?.browserID),
+                        browserProfileID: .some(profile?.profileID))
+                } else {
+                    self.settings.addTokenAccount(
+                        provider: provider,
+                        label: label,
+                        token: profile == nil ? token : "",
+                        organizationID: organizationID,
+                        browserID: profile?.browserID,
+                        browserProfileID: profile?.profileID)
+                }
+                Task { @MainActor in
+                    await ProviderInteractionContext.$current.withValue(.userInitiated) {
+                        await self.store.refreshProvider(provider, allowDisabled: true)
+                    }
+                }
+            }
+        }
         // Provider-specific by design: only Claude accounts declare local transcript ownership.
         if provider == .claude {
             descriptor.claudeConfigDirectory = { accountID in
